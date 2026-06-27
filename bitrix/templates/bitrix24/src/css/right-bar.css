@@ -1,0 +1,34 @@
+.app__right-bar {
+	transition: background-position 0.3s ease-in-out;
+}
+
+.bitrix24-light-theme .app__right-bar.--transparent {
+	background-color: rgba(0, 0, 0, .2);
+}
+
+.bitrix24-dark-theme .app__right-bar.--transparent {
+	background-color: rgba(255, 255, 255, .6);
+}
+
+.bitrix24-default-theme .app__right-bar.--transparent {
+	background-color: rgba(255, 255, 255, .6);
+}
+
+.im-chat-recent-list {
+	height: 100%;
+}
+
+.right-bar-overlay {
+	display: none;
+	position: fixed;
+	right: 0;
+	top: 0;
+	bottom: 0;
+	width: 85px;
+	will-change: background;
+	z-index: -1;
+}
+
+.side-panel-disable-scrollbar .right-bar-overlay {
+	display: block;
+}

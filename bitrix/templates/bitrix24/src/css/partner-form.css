@@ -1,0 +1,143 @@
+.bitrix24-partner__popup .popup-window-content {
+	background-color: var(--ui-color-palette-white-base, #ffffff);
+	padding: 0 var(--ui-space-inset-sm2);
+}
+.bitrix24-partner__popup .popup-window-titlebar {
+	display: flex;
+	align-items: center;
+	align-content: center;
+	padding-left: 14px;
+}
+
+.bitrix24-partner__popup .popup-window-buttons {
+	padding: var(--ui-space-inset-sm2) var(--ui-space-inset-sm2);
+}
+.bitrix24-partner__popup .popup-window-titlebar-text {
+	color: var(--ui-color-palette-black-base, #333);
+	font-size: var(--ui-font-size-2xl, 19px);
+	font-style: normal;
+	font-weight: 500;
+	line-height: var(--ui-typography-heading-h3-line-height, 26px);
+	letter-spacing: var(--ui-text-letter-spacing-neg-2, -0.1px);
+	display: flex;
+	align-items: center;
+	align-content: center;
+	padding: 0;
+}
+
+.bitrix24-partner__popup-content_title {
+	display: block;
+	margin-bottom: 13px;
+	font-size: 14px;
+	line-height: 21px;
+	color: var(--ui-color-palette-gray-90, #525c69);
+}
+
+.bitrix24-partner__popup-content_partner-preview {
+	padding: 12px 0 16px 0;
+	display: flex;
+}
+
+.bitrix24-partner__popup-content_name-wrapper {
+	display: flex;
+	flex-direction: column;
+	margin-left: 12px;
+	align-items: flex-start;
+	justify-content: center;
+}
+
+.bitrix24-partner__popup-content_name {
+	color: var(--ui-color-palette-black-solid, #000);
+	font-size: var(--ui-font-size-xl, 16px);
+	font-style: normal;
+	font-weight: 500;
+	line-height: var(--ui-typography-heading-h5-line-height, 21px);
+	letter-spacing: var(--ui-text-letter-spacing-neg-3, -0.1px);
+}
+
+.bitrix24-partner__popup-content_description {
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.bitrix24-partner__popup-content-logo {
+	min-width: 48px;
+	max-width: 100px;
+	width: 100%;
+	height: auto;
+	max-height: 100px;
+	object-fit: contain;
+	display: block;
+}
+
+.bitrix24-partner__popup-content_info-block {
+	display: flex;
+	align-items: center;
+	align-content: center;
+	padding: 6px 0;
+	position: relative;
+}
+.copy-icon {
+	display: none;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+	margin-left: 8px;
+	transition: background 0.3s;
+}
+.copy-icon .ui-icon-set {
+	--ui-icon-set__icon-size: 16px;
+	--ui-icon-set__icon-color: var(--ui-color-palette-black-base, #333);
+}
+.copy-icon svg {
+	width: 16px;
+	height: 16px;
+	fill: var(--ui-color-link-primary-base,#0075FF);
+	pointer-events: none;
+}
+.bitrix24-partner__popup-content_info-block:hover .copy-icon,
+.bitrix24-partner__popup-content_info-block:focus-within .copy-icon {
+	display: flex;
+}
+.copy-icon.copied {
+	--ui-icon-set__icon-color: var(--ui-color-tag-4, #87eda0);
+}
+
+.bitrix24-partner__popup-content_info-block-icon-wrapper {
+	border-radius: 6px;
+	background: var(--ui-color-accent-soft-blue-3, #EDF7FF);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.bitrix24-partner__popup-content_info-block-icon-wrapper .ui-icon-set {
+	--ui-icon-set__icon-size: 20px;
+	--ui-icon-set__icon-color:  var(--ui-color-g-content-blue-2, #0075FF);
+}
+
+.bitrix24-partner__popup-content_info-block-info-value {
+	padding-left: var(--ui-space-inset-sm);
+}
+
+.bitrix24-partner__popup-content_link {
+	display: inline-block;
+	font-size: 14px;
+	line-height: 17px;
+	border-bottom: 1px dashed var(--ui-color-link-primary-base);
+	transition: border-bottom .3s;
+}
+
+.bitrix24-partner__popup-content_link:hover {
+	border-bottom: 1px dashed var(--ui-color-background-transparent);
+}
+
+.bitrix24-partner__popup-content_desc {
+	display: block;
+	font-size: 14px;
+	color: var(--ui-color-palette-black-base, #333);
+	padding: 10px 0 6px 0;
+}
