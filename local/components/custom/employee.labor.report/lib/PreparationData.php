@@ -418,31 +418,22 @@ class PreparationData
         $departmentIds = self::getUserDepartmentIds($userId);
         $departmentNames = self::getDepartmentNames();
 
-        foreach ($departmentIds as $departmentId)
-        {
-            if ($departmentId > 1 && !empty($departmentNames[$departmentId]))
+        if ($departmentIds) {
+            foreach ($departmentIds as $departmentId)
             {
-                return $departmentNames[$departmentId];
+                if ($departmentId > 1 && !empty($departmentNames[$departmentId]))
+                {
+                    return $departmentNames[$departmentId];
+                }
             }
         }
 
         return '—';
     }
 
-    private static function getUserDepartmentIds(int $userId): array
+    private static function getUserDepartmentIds(int $userId): ?array
     {
-        $departmentIds = self::getUserDepartmentIdsD7($userId);
 
-        if ($departmentIds !== [])
-        {
-            return $departmentIds;
-        }
-
-        return self::getUserDepartmentIdsD6($userId);
-    }
-
-    private static function getUserDepartmentIdsD7(int $userId): array
-    {
         $user = UserTable::getList([
             'select' => ['UF_DEPARTMENT'],
             'filter' => ['=ID' => $userId],
@@ -461,30 +452,17 @@ class PreparationData
             ? $user['UF_DEPARTMENT']
             : [$user['UF_DEPARTMENT']];
 
-        return array_values(array_filter(array_map('intval', $values)));
-    }
+        $departmentIds =  array_values(array_filter(array_map('intval', $values)));
 
-    private static function getUserDepartmentIdsD6(int $userId): array
-    {
-        if (!is_callable([CIntranetUtils::class, 'GetUserDepartments']))
+        if ($departmentIds !== [])
         {
-            return [];
+            return $departmentIds;
         }
 
-        $departmentIds = CIntranetUtils::GetUserDepartments($userId) ?: [];
-
-        return array_values(array_filter(array_map('intval', $departmentIds)));
+        return null;
     }
 
     private static function getUserIdsByDepartment(int $departmentId): array
-    {
-        return array_values(array_unique(array_merge(
-            self::getUserIdsByDepartmentD7($departmentId),
-            self::getUserIdsByDepartmentD6($departmentId)
-        )));
-    }
-
-    private static function getUserIdsByDepartmentD7(int $departmentId): array
     {
         $userIds = [];
         $result = UserTable::getList([
@@ -501,32 +479,6 @@ class PreparationData
         while ($row = $result->fetch())
         {
             $userIds[] = (int) $row['ID'];
-        }
-
-        return array_values(array_unique($userIds));
-    }
-
-    private static function getUserIdsByDepartmentD6(int $departmentId): array
-    {
-        if (!is_callable([CIntranetUtils::class, 'GetDepartmentEmployees']))
-        {
-            return [];
-        }
-
-        $userIds = [];
-        $employees = CIntranetUtils::GetDepartmentEmployees([$departmentId], true, false, 'Y');
-
-        if (!is_array($employees))
-        {
-            return [];
-        }
-
-        foreach ($employees as $employee)
-        {
-            if (!empty($employee['ID']))
-            {
-                $userIds[] = (int) $employee['ID'];
-            }
         }
 
         return array_values(array_unique($userIds));
