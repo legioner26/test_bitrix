@@ -13,7 +13,8 @@ use Bitrix\Main\UserTable;
 use Bitrix\Socialnetwork\WorkgroupTable;
 use Bitrix\Tasks\Internals\Task\ElapsedTimeTable;
 use Bitrix\Tasks\Internals\TaskTable;
-use CIntranetUtils;
+use Exception;
+use Bitrix\Main\Diag\Debug;
 
 class PreparationData
 {
@@ -28,60 +29,63 @@ class PreparationData
 
     public static function getRows(array $filter = []): array
     {
-        if (!self::loadModules())
-        {
+        if (!self::loadModules()) {
             return [];
         }
 
         $runtime = self::getElapsedTimeRuntime();
         $queryFilter = self::buildElapsedTimeFilter($filter);
 
-        $result = ElapsedTimeTable::getList([
-            'select'  => [
-                'ID',
-                'USER_ID',
-                'SECONDS',
-                'DATE_START',
-                'CREATED_DATE',
-                'WORK_DATE',
-                'TASK_TITLE'        => 'TASK.TITLE',
-                'PROJECT_NAME'      => 'GROUP.NAME',
-                'USER_NAME'         => 'USER.NAME',
-                'USER_LAST_NAME'    => 'USER.LAST_NAME',
-                'USER_SECOND_NAME'  => 'USER.SECOND_NAME',
-                'USER_LOGIN'        => 'USER.LOGIN',
-            ],
-            'filter'  => $queryFilter,
-            'order'   => [
-                'WORK_DATE' => 'DESC',
-                'ID'        => 'DESC',
-            ],
-            'runtime' => $runtime,
-            'cache'   => [
-                'ttl' => 3600,
-                'cache_joins' => true,
-            ],
-        ]);
+        try {
+            $result = ElapsedTimeTable::getList([
+                'select' => [
+                    'ID',
+                    'USER_ID',
+                    'SECONDS',
+                    'DATE_START',
+                    'CREATED_DATE',
+                    'WORK_DATE',
+                    'TASK_TITLE' => 'TASK.TITLE',
+                    'PROJECT_NAME' => 'GROUP.NAME',
+                    'USER_NAME' => 'USER.NAME',
+                    'USER_LAST_NAME' => 'USER.LAST_NAME',
+                    'USER_SECOND_NAME' => 'USER.SECOND_NAME',
+                    'USER_LOGIN' => 'USER.LOGIN',
+                ],
+                'filter' => $queryFilter,
+                'order' => [
+                    'WORK_DATE' => 'DESC',
+                    'ID' => 'DESC',
+                ],
+                'runtime' => $runtime,
+                'cache' => [
+                    'ttl' => 3600,
+                    'cache_joins' => true,
+                ],
+            ]);
+        } catch (Exception $exception) {
+            AddMessage2Log($exception->getMessage(), 'main');
+        }
+
 
         $rows = [];
 
-        while ($row = $result->fetch())
-        {
-            $userId = (int) $row['USER_ID'];
+        while ($row = $result->fetch()) {
+            $userId = (int)$row['USER_ID'];
 
             $rows[] = [
-                'ID'          => (int) $row['ID'],
-                'FIO'         => self::formatUserName([
-                    'NAME'        => $row['USER_NAME'] ?? '',
-                    'LAST_NAME'   => $row['USER_LAST_NAME'] ?? '',
+                'ID' => (int)$row['ID'],
+                'FIO' => self::formatUserName([
+                    'NAME' => $row['USER_NAME'] ?? '',
+                    'LAST_NAME' => $row['USER_LAST_NAME'] ?? '',
                     'SECOND_NAME' => $row['USER_SECOND_NAME'] ?? '',
-                    'LOGIN'       => $row['USER_LOGIN'] ?? '',
+                    'LOGIN' => $row['USER_LOGIN'] ?? '',
                 ]),
-                'DEPARTMENT'  => self::getUserDepartmentName($userId),
-                'PROJECT'     => (string) ($row['PROJECT_NAME'] ?? '') ?: '—',
-                'TASK'        => (string) ($row['TASK_TITLE'] ?? ''),
-                'LABOR_HOURS' => round(((int) $row['SECONDS']) / 3600, 2),
-                'WORK_DATE'   => self::normalizeDate($row['DATE_START'] ?? null, $row['CREATED_DATE'] ?? null),
+                'DEPARTMENT' => self::getUserDepartmentName($userId),
+                'PROJECT' => (string)($row['PROJECT_NAME'] ?? '') ?: '—',
+                'TASK' => (string)($row['TASK_TITLE'] ?? ''),
+                'LABOR_HOURS' => round(((int)$row['SECONDS']) / 3600, 2),
+                'WORK_DATE' => self::normalizeDate($row['DATE_START'] ?? null, $row['CREATED_DATE'] ?? null),
             ];
         }
 
@@ -90,33 +94,35 @@ class PreparationData
 
     public static function getDepartments(): array
     {
-        if (!self::loadModules())
-        {
+        if (!self::loadModules()) {
             return [];
         }
 
         $iblockId = self::getDepartmentsIblockId();
-        if ($iblockId <= 0)
-        {
+        if ($iblockId <= 0) {
             return [];
         }
 
         $items = [];
-        $result = SectionTable::getList([
-            'select' => ['ID', 'NAME'],
-            'filter' => [
-                '=IBLOCK_ID' => $iblockId,
-                '>ID'        => 1,
-            ],
-            'order' => ['LEFT_MARGIN' => 'ASC'],
-            'cache'   => [
-                'ttl' => 3600,
-            ],
-        ]);
 
-        while ($row = $result->fetch())
-        {
-            $items[(string) $row['ID']] = (string) $row['NAME'];
+        try {
+            $result = SectionTable::getList([
+                'select' => ['ID', 'NAME'],
+                'filter' => [
+                    '=IBLOCK_ID' => $iblockId,
+                    '>ID' => 1,
+                ],
+                'order' => ['LEFT_MARGIN' => 'ASC'],
+                'cache' => [
+                    'ttl' => 3600,
+                ],
+            ]);
+        } catch (Exception $exception) {
+            AddMessage2Log($exception->getMessage(), 'main');
+        }
+
+        while ($row = $result->fetch()) {
+            $items[(string)$row['ID']] = (string)$row['NAME'];
         }
 
         return $items;
@@ -124,56 +130,60 @@ class PreparationData
 
     public static function getProjects(): array
     {
-        if (!self::loadModules())
-        {
+        if (!self::loadModules()) {
             return [];
         }
 
         $groupIds = [];
         $runtime = self::getElapsedTimeRuntime();
 
-        $result = ElapsedTimeTable::getList([
-            'select'  => ['GROUP_ID' => 'TASK.GROUP_ID'],
-            'filter'  => [
-                '!TASK.GROUP_ID' => false,
-            ],
-            'group'   => ['TASK.GROUP_ID'],
-            'runtime' => $runtime,
-            'cache'   => [
-                'ttl' => 3600,
-                'cache_joins' => true,
-            ],
-        ]);
+        try {
+            $result = ElapsedTimeTable::getList([
+                'select' => ['GROUP_ID' => 'TASK.GROUP_ID'],
+                'filter' => [
+                    '!TASK.GROUP_ID' => false,
+                ],
+                'group' => ['TASK.GROUP_ID'],
+                'runtime' => $runtime,
+                'cache' => [
+                    'ttl' => 3600,
+                    'cache_joins' => true,
+                ],
+            ]);
+        } catch (Exception $exception) {
+            AddMessage2Log($exception->getMessage(), 'main');
+        }
 
-        while ($row = $result->fetch())
-        {
-            $groupId = (int) ($row['GROUP_ID'] ?? 0);
-            if ($groupId > 0)
-            {
+        while ($row = $result->fetch()) {
+            $groupId = (int)($row['GROUP_ID'] ?? 0);
+            if ($groupId > 0) {
                 $groupIds[] = $groupId;
             }
         }
 
-        if ($groupIds === [])
-        {
+        if ($groupIds === []) {
             return [];
         }
 
         $items = [];
-        $groups = WorkgroupTable::getList([
-            'select' => ['ID', 'NAME'],
-            'filter' => [
-                '@ID' => array_values(array_unique($groupIds)),
-            ],
-            'order' => ['NAME' => 'ASC'],
-            'cache'   => [
-                'ttl' => 3600,
-            ],
-        ]);
 
-        while ($row = $groups->fetch())
-        {
-            $items[(string) $row['ID']] = (string) $row['NAME'];
+        try {
+            $groups = WorkgroupTable::getList([
+                'select' => ['ID', 'NAME'],
+                'filter' => [
+                    '@ID' => array_values(array_unique($groupIds)),
+                ],
+                'order' => ['NAME' => 'ASC'],
+                'cache' => [
+                    'ttl' => 3600,
+                ],
+            ]);
+        } catch (Exception $exception) {
+            AddMessage2Log($exception->getMessage(), 'main');
+        }
+
+        while ($row = $groups->fetch()) {
+            $items[(string)$row['ID']] = (string)$row['NAME'];
         }
 
         return $items;
@@ -223,8 +233,7 @@ class PreparationData
         $dateFrom = self::parseFilterDate($filter['DATE_FROM'] ?? null);
         $dateTo = self::parseFilterDateEnd($filter['DATE_TO'] ?? null);
 
-        if ($dateFrom !== null)
-        {
+        if ($dateFrom !== null) {
             $queryFilter[] = [
                 'LOGIC' => 'OR',
                 ['>=DATE_START' => $dateFrom],
@@ -236,8 +245,7 @@ class PreparationData
             ];
         }
 
-        if ($dateTo !== null)
-        {
+        if ($dateTo !== null) {
             $queryFilter[] = [
                 'LOGIC' => 'OR',
                 ['<=DATE_START' => $dateTo],
@@ -249,18 +257,15 @@ class PreparationData
             ];
         }
 
-        if (!empty($filter['PROJECT_ID']))
-        {
-            $queryFilter['=TASK.GROUP_ID'] = (int) $filter['PROJECT_ID'];
+        if (!empty($filter['PROJECT_ID'])) {
+            $queryFilter['=TASK.GROUP_ID'] = (int)$filter['PROJECT_ID'];
         }
 
-        if (!empty($filter['TASK']))
-        {
+        if (!empty($filter['TASK'])) {
             $queryFilter['%TASK.TITLE'] = $filter['TASK'];
         }
 
-        if (!empty($filter['FIO']))
-        {
+        if (!empty($filter['FIO'])) {
             $queryFilter[] = [
                 'LOGIC' => 'OR',
                 ['%USER.LAST_NAME' => $filter['FIO']],
@@ -270,15 +275,11 @@ class PreparationData
             ];
         }
 
-        if (!empty($filter['DEPARTMENT_ID']))
-        {
-            $userIds = self::getUserIdsByDepartment((int) $filter['DEPARTMENT_ID']);
-            if ($userIds === [])
-            {
+        if (!empty($filter['DEPARTMENT_ID'])) {
+            $userIds = self::getUserIdsByDepartment((int)$filter['DEPARTMENT_ID']);
+            if ($userIds === []) {
                 $queryFilter['=ID'] = 0;
-            }
-            else
-            {
+            } else {
                 $queryFilter['@USER_ID'] = $userIds;
             }
         }
@@ -288,32 +289,25 @@ class PreparationData
 
     private static function parseFilterDate(?string $value): ?DateTime
     {
-        if ($value === null)
-        {
+        if ($value === null) {
             return null;
         }
 
         $value = trim($value);
-        if ($value === '')
-        {
+        if ($value === '') {
             return null;
         }
 
-        foreach (['Y-m-d', 'd.m.Y', 'd/m/Y'] as $format)
-        {
-            try
-            {
+        foreach (['Y-m-d', 'd.m.Y', 'd/m/Y'] as $format) {
+            try {
                 return new DateTime($value, $format);
-            }
-            catch (\Bitrix\Main\ObjectException $e)
-            {
+            } catch (\Bitrix\Main\ObjectException $e) {
                 continue;
             }
         }
 
         $timestamp = MakeTimeStamp($value);
-        if ($timestamp > 0)
-        {
+        if ($timestamp > 0) {
             return DateTime::createFromTimestamp($timestamp);
         }
 
@@ -323,45 +317,43 @@ class PreparationData
     private static function parseFilterDateEnd(?string $value): ?DateTime
     {
         $date = self::parseFilterDate($value);
-        if ($date === null)
-        {
+        if ($date === null) {
             return null;
         }
 
-        try
-        {
+        try {
             return new DateTime($date->format('Y-m-d') . ' 23:59:59', 'Y-m-d H:i:s');
-        }
-        catch (\Bitrix\Main\ObjectException $e)
-        {
+        } catch (\Bitrix\Main\ObjectException $e) {
             return null;
         }
     }
 
     private static function getDepartmentsIblockId(): int
     {
-        if (self::$departmentsIblockId !== null)
-        {
+        if (self::$departmentsIblockId !== null) {
             return self::$departmentsIblockId;
         }
 
         self::$departmentsIblockId = 0;
 
-        $iblock = IblockTable::getList([
-            'select' => ['ID'],
-            'filter' => [
-                '=IBLOCK_TYPE_ID' => self::DEPARTMENTS_IBLOCK_TYPE,
-                '=CODE'           => self::DEPARTMENTS_IBLOCK_CODE,
-            ],
-            'limit' => 1,
-            'cache'   => [
-                'ttl' => 3600,
-            ],
-        ])->fetch();
+        try {
+            $iblock = IblockTable::getList([
+                'select' => ['ID'],
+                'filter' => [
+                    '=IBLOCK_TYPE_ID' => self::DEPARTMENTS_IBLOCK_TYPE,
+                    '=CODE' => self::DEPARTMENTS_IBLOCK_CODE,
+                ],
+                'limit' => 1,
+                'cache' => [
+                    'ttl' => 3600,
+                ],
+            ])->fetch();
+        } catch (Exception $exception) {
+            AddMessage2Log($exception->getMessage(), 'main');
+        }
 
-        if ($iblock)
-        {
-            self::$departmentsIblockId = (int) $iblock['ID'];
+        if ($iblock) {
+            self::$departmentsIblockId = (int)$iblock['ID'];
         }
 
         return self::$departmentsIblockId;
@@ -369,30 +361,31 @@ class PreparationData
 
     private static function getDepartmentNames(): array
     {
-        if (self::$departmentNames !== null)
-        {
+        if (self::$departmentNames !== null) {
             return self::$departmentNames;
         }
 
         self::$departmentNames = [];
         $iblockId = self::getDepartmentsIblockId();
 
-        if ($iblockId <= 0)
-        {
+        if ($iblockId <= 0) {
             return self::$departmentNames;
         }
 
-        $result = SectionTable::getList([
-            'select' => ['ID', 'NAME'],
-            'filter' => ['=IBLOCK_ID' => $iblockId],
-            'cache'   => [
-                'ttl' => 3600,
-            ],
-        ]);
+        try {
+            $result = SectionTable::getList([
+                'select' => ['ID', 'NAME'],
+                'filter' => ['=IBLOCK_ID' => $iblockId],
+                'cache' => [
+                    'ttl' => 3600,
+                ],
+            ]);
+        } catch (Exception $exception) {
+            AddMessage2Log($exception->getMessage(), 'main');
+        }
 
-        while ($row = $result->fetch())
-        {
-            self::$departmentNames[(int) $row['ID']] = (string) $row['NAME'];
+        while ($row = $result->fetch()) {
+            self::$departmentNames[(int)$row['ID']] = (string)$row['NAME'];
         }
 
         return self::$departmentNames;
@@ -400,13 +393,11 @@ class PreparationData
 
     private static function getUserDepartmentName(int $userId): string
     {
-        if (self::$userDepartmentNames === null)
-        {
+        if (self::$userDepartmentNames === null) {
             self::$userDepartmentNames = [];
         }
 
-        if (!isset(self::$userDepartmentNames[$userId]))
-        {
+        if (!isset(self::$userDepartmentNames[$userId])) {
             self::$userDepartmentNames[$userId] = self::resolveUserDepartmentName($userId);
         }
 
@@ -419,10 +410,8 @@ class PreparationData
         $departmentNames = self::getDepartmentNames();
 
         if ($departmentIds) {
-            foreach ($departmentIds as $departmentId)
-            {
-                if ($departmentId > 1 && !empty($departmentNames[$departmentId]))
-                {
+            foreach ($departmentIds as $departmentId) {
+                if ($departmentId > 1 && !empty($departmentNames[$departmentId])) {
                     return $departmentNames[$departmentId];
                 }
             }
@@ -434,17 +423,20 @@ class PreparationData
     private static function getUserDepartmentIds(int $userId): ?array
     {
 
-        $user = UserTable::getList([
-            'select' => ['UF_DEPARTMENT'],
-            'filter' => ['=ID' => $userId],
-            'limit'  => 1,
-            'cache'   => [
-                'ttl' => 3600,
-            ],
-        ])->fetch();
+        try {
+            $user = UserTable::getList([
+                'select' => ['UF_DEPARTMENT'],
+                'filter' => ['=ID' => $userId],
+                'limit' => 1,
+                'cache' => [
+                    'ttl' => 3600,
+                ],
+            ])->fetch();
+        } catch (Exception $exception) {
+            AddMessage2Log($exception->getMessage(), 'main');
+        }
 
-        if (!$user || empty($user['UF_DEPARTMENT']))
-        {
+        if (!$user || empty($user['UF_DEPARTMENT'])) {
             return [];
         }
 
@@ -452,10 +444,9 @@ class PreparationData
             ? $user['UF_DEPARTMENT']
             : [$user['UF_DEPARTMENT']];
 
-        $departmentIds =  array_values(array_filter(array_map('intval', $values)));
+        $departmentIds = array_values(array_filter(array_map('intval', $values)));
 
-        if ($departmentIds !== [])
-        {
+        if ($departmentIds !== []) {
             return $departmentIds;
         }
 
@@ -465,20 +456,24 @@ class PreparationData
     private static function getUserIdsByDepartment(int $departmentId): array
     {
         $userIds = [];
-        $result = UserTable::getList([
-            'select' => ['ID'],
-            'filter' => [
-                '=ACTIVE'        => 'Y',
-                '=UF_DEPARTMENT' => $departmentId,
-            ],
-            'cache'   => [
-                'ttl' => 3600,
-            ],
-        ]);
 
-        while ($row = $result->fetch())
-        {
-            $userIds[] = (int) $row['ID'];
+        try {
+            $result = UserTable::getList([
+                'select' => ['ID'],
+                'filter' => [
+                    '=ACTIVE' => 'Y',
+                    '=UF_DEPARTMENT' => $departmentId,
+                ],
+                'cache' => [
+                    'ttl' => 3600,
+                ],
+            ]);
+        } catch (Exception $exception) {
+            AddMessage2Log($exception->getMessage(), 'main');
+        }
+
+        while ($row = $result->fetch()) {
+            $userIds[] = (int)$row['ID'];
         }
 
         return array_values(array_unique($userIds));
@@ -487,35 +482,31 @@ class PreparationData
     private static function formatUserName(array $user): string
     {
         $name = trim(implode(' ', array_filter([
-            (string) ($user['LAST_NAME'] ?? ''),
-            (string) ($user['NAME'] ?? ''),
-            (string) ($user['SECOND_NAME'] ?? ''),
+            (string)($user['LAST_NAME'] ?? ''),
+            (string)($user['NAME'] ?? ''),
+            (string)($user['SECOND_NAME'] ?? ''),
         ])));
 
-        if ($name !== '')
-        {
+        if ($name !== '') {
             return $name;
         }
 
-        return (string) ($user['LOGIN'] ?? '');
+        return (string)($user['LOGIN'] ?? '');
     }
 
     private static function normalizeDate($dateStart, $createdDate): string
     {
         $value = $dateStart ?: $createdDate;
 
-        if ($value instanceof DateTime)
-        {
+        if ($value instanceof DateTime) {
             return $value->format('Y-m-d');
         }
 
-        if ($value instanceof \DateTimeInterface)
-        {
+        if ($value instanceof \DateTimeInterface) {
             return $value->format('Y-m-d');
         }
 
-        if (is_string($value) && $value !== '')
-        {
+        if (is_string($value) && $value !== '') {
             return substr($value, 0, 10);
         }
 
